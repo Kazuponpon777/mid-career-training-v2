@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    @apply bg-slate-100 text-slate-800 antialiased font-sans;
+  }
+}
+
+/* 共有リンク等の長いテキストが崩れないためのユーティリティ */
+.truncate-url {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
