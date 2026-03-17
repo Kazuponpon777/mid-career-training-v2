@@ -62,6 +62,7 @@ const getRelativePosition = (timeStr) => {
 const encodeScheduleToUrl = (scheduleData) => {
   try {
     const jsonStr = JSON.stringify(scheduleData);
+    // 日本語（マルチバイト）を考慮したBase64エンコード
     return btoa(unescape(encodeURIComponent(jsonStr)));
   } catch (e) {
     console.error("Encoding error:", e);
@@ -71,11 +72,14 @@ const encodeScheduleToUrl = (scheduleData) => {
 
 const decodeScheduleFromUrl = (encodedData) => {
   try {
-    const rawData = JSON.parse(atob(decodeURIComponent(encodedData)));
+    // URLSearchParams経由でくる場合は既にURLデコードされている可能性があるが、
+    // 特殊文字（+など）の化けを防ぐため慎重にデコード
+    const jsonStr = decodeURIComponent(escape(atob(encodedData)));
+    const rawData = JSON.parse(jsonStr);
+    
     // 下位互換性とデータ正規化のための処理
     return rawData.map(day => ({
       ...day,
-      // 15分単位に丸める処理を追加してノイズを排除
       startTime: day.startTime || '09:00',
       items: (day.items || []).map(item => ({
         ...item,
@@ -87,6 +91,8 @@ const decodeScheduleFromUrl = (encodedData) => {
     return null;
   }
 };
+
+const LOCAL_STORAGE_KEY = 'mid-career-training-v2-cache';
 
 export default function App() {
   const fileInputRef = useRef(null);
@@ -102,7 +108,18 @@ export default function App() {
     startTime: '09:00',
     items: [] 
   }));
-  const [schedule, setSchedule] = useState(initialDays);
+  const [schedule, setSchedule] = useState(() => {
+    // 起動時にlocalStorageから復元を試みる（URLパラメータがない場合のデフォルト）
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to load cache:", e);
+      }
+    }
+    return initialDays;
+  });
   
   const [draggedItem, setDraggedItem] = useState(null); // { dayIndex, itemIndex }
   const [dragOverDay, setDragOverDay] = useState(null); // dayIndex
@@ -120,9 +137,16 @@ export default function App() {
       if (loadedData && Array.isArray(loadedData)) {
         setSchedule(loadedData);
         setIsPreviewMode(true);
+        // 読み込み後はURLを綺麗にする（任意。再リロードでの事故防止）
+        // window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
   }, []);
+
+  // データの自動保存 (Caching)
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(schedule));
+  }, [schedule]);
 
   // 使用済み講師の特定
   const usedLecturerIds = useMemo(() => {
@@ -286,7 +310,8 @@ export default function App() {
 
   const generateShareUrl = () => {
     const encoded = encodeScheduleToUrl(schedule);
-    const url = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+    // encodeURIComponentでラップして特殊文字（+など）の化けを確実に防ぐ
+    const url = `${window.location.origin}${window.location.pathname}?data=${encodeURIComponent(encoded)}`;
     setShareUrl(url);
   };
 
