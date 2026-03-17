@@ -91,21 +91,27 @@ const decodeScheduleFromUrl = (encodedData) => {
 export default function App() {
   const fileInputRef = useRef(null);
   
-  // プレビューモード（旧・印刷モード）の状態管理
+  // --- 1. 状態管理 (Hooks) ---
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
-
+  
   const initialDays = [1, 2, 3].map((dayNum) => ({
     day: dayNum,
     date: '', 
     startTime: '09:00',
     items: [] 
   }));
-
   const [schedule, setSchedule] = useState(initialDays);
+  
+  const [draggedItem, setDraggedItem] = useState(null); // { dayIndex, itemIndex }
+  const [dragOverDay, setDragOverDay] = useState(null); // dayIndex
+  const [dragOverItem, setDragOverItem] = useState(null); // { dayIndex, itemIndex }
+  const [resizingItem, setResizingItem] = useState(null); // { dayIndex, itemIndex, startY, startDuration }
 
-  // --- 初期ロード時にURLパラメータをチェック ---
+  // --- 2. 副作用・メモ (Hooks) ---
+  
+  // URLパラメータからの初期ロード
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const dataParam = params.get('data');
@@ -113,12 +119,12 @@ export default function App() {
       const loadedData = decodeScheduleFromUrl(dataParam);
       if (loadedData && Array.isArray(loadedData)) {
         setSchedule(loadedData);
-        // データがURLにある場合は最初からプレビューモードにする
         setIsPreviewMode(true);
       }
     }
   }, []);
 
+  // 使用済み講師の特定
   const usedLecturerIds = useMemo(() => {
     const used = new Set();
     schedule.forEach(day => {
@@ -131,7 +137,31 @@ export default function App() {
     return used;
   }, [schedule]);
 
-  // --- 操作ハンドラー ---
+  // リサイズ操作のグローバルイベント
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!resizingItem) return;
+      const deltaY = e.clientY - resizingItem.startY;
+      const deltaMins = Math.round(deltaY / PIXELS_PER_MINUTE / 5) * 5;
+      const newDuration = Math.max(5, resizingItem.startDuration + deltaMins);
+      const newSchedule = [...schedule];
+      if (newSchedule[resizingItem.dayIndex].items[resizingItem.itemIndex].duration !== newDuration) {
+        newSchedule[resizingItem.dayIndex].items[resizingItem.itemIndex].duration = newDuration;
+        setSchedule(newSchedule);
+      }
+    };
+    const handleMouseUp = () => setResizingItem(null);
+    if (resizingItem) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingItem, schedule]);
+
+  // --- 3. 操作ハンドラー ---
 
   const handleStartTimeChange = (dayIndex, newTime) => {
     const newSchedule = [...schedule];
@@ -179,13 +209,9 @@ export default function App() {
     setSchedule(newSchedule);
   };
 
-  // --- ドラッグ＆ドロップ関連のハンドラ ---
   const handleDragStart = (e, dayIndex, itemIndex) => {
     setDraggedItem({ dayIndex, itemIndex });
     e.dataTransfer.effectAllowed = 'move';
-    // ゴースト画像のカスタマイズ（任意）
-    const ghost = e.currentTarget.cloneNode(true);
-    ghost.style.opacity = '0.5';
   };
 
   const handleDragOver = (e, dayIndex, itemIndex = null) => {
@@ -197,25 +223,20 @@ export default function App() {
   const handleDrop = (e, dayIndex, targetItemIndex = null) => {
     e.preventDefault();
     if (!draggedItem) return;
-
     const newSchedule = [...schedule];
     const sourceDayItems = [...newSchedule[draggedItem.dayIndex].items];
     const itemToMove = sourceDayItems.splice(draggedItem.itemIndex, 1)[0];
-
     if (draggedItem.dayIndex === dayIndex) {
-      // 同じ日の中での移動
       const actualTargetIndex = targetItemIndex === null ? sourceDayItems.length : targetItemIndex;
       sourceDayItems.splice(actualTargetIndex, 0, itemToMove);
       newSchedule[dayIndex].items = sourceDayItems;
     } else {
-      // 異なる日への移動
       newSchedule[draggedItem.dayIndex].items = sourceDayItems;
       const targetDayItems = [...newSchedule[dayIndex].items];
       const actualTargetIndex = targetItemIndex === null ? targetDayItems.length : targetItemIndex;
       targetDayItems.splice(actualTargetIndex, 0, itemToMove);
       newSchedule[dayIndex].items = targetDayItems;
     }
-
     setSchedule(newSchedule);
     setDraggedItem(null);
     setDragOverDay(null);
@@ -228,7 +249,6 @@ export default function App() {
     setDragOverItem(null);
   };
 
-  // --- リサイズ関連のハンドラ ---
   const handleResizeStart = (e, dayIndex, itemIndex, currentDuration) => {
     e.preventDefault();
     e.stopPropagation();
@@ -239,36 +259,6 @@ export default function App() {
       startDuration: currentDuration
     });
   };
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!resizingItem) return;
-
-      const deltaY = e.clientY - resizingItem.startY;
-      const deltaMins = Math.round(deltaY / PIXELS_PER_MINUTE / 5) * 5; // 5分単位でスナップ
-      const newDuration = Math.max(5, resizingItem.startDuration + deltaMins);
-
-      const newSchedule = [...schedule];
-      if (newSchedule[resizingItem.dayIndex].items[resizingItem.itemIndex].duration !== newDuration) {
-        newSchedule[resizingItem.dayIndex].items[resizingItem.itemIndex].duration = newDuration;
-        setSchedule(newSchedule);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setResizingItem(null);
-    };
-
-    if (resizingItem) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [resizingItem, schedule]);
 
   const moveItem = (dayIndex, itemIndex, direction) => {
     const newSchedule = [...schedule];
@@ -292,58 +282,21 @@ export default function App() {
     window.history.pushState({}, document.title, window.location.pathname);
   };
 
-  const executePrint = () => {
-    setTimeout(() => window.print(), 500);
-  };
+  const executePrint = () => setTimeout(() => window.print(), 500);
 
-  // 共有URL生成
   const generateShareUrl = () => {
     const encoded = encodeScheduleToUrl(schedule);
     const url = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
     setShareUrl(url);
   };
 
-  // 互換性のあるクリップボードコピー関数
   const copyToClipboard = () => {
-    const fallbackCopyTextToClipboard = (text) => {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      
-      textArea.style.top = "0";
-      textArea.style.left = "0";
-      textArea.style.position = "fixed";
-
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-
-      try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-          setCopySuccess(true);
-          setTimeout(() => setCopySuccess(false), 3000);
-        } else {
-          console.error('Fallback: Copying text command was unsuccessful');
-        }
-      } catch (err) {
-        console.error('Fallback: Oops, unable to copy', err);
-      }
-
-      document.body.removeChild(textArea);
-    };
-
+    const text = shareUrl;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(shareUrl)
-        .then(() => {
-          setCopySuccess(true);
-          setTimeout(() => setCopySuccess(false), 3000);
-        })
-        .catch(err => {
-          console.warn('Clipboard API failed, using fallback.', err);
-          fallbackCopyTextToClipboard(shareUrl);
-        });
-    } else {
-      fallbackCopyTextToClipboard(shareUrl);
+      navigator.clipboard.writeText(text).then(() => {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 3000);
+      });
     }
   };
 
@@ -353,20 +306,9 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `training_curriculum_${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(link);
+    link.download = `training_curriculum.json`;
     link.click();
-    document.body.removeChild(link);
   };
-
-  const handleLoadJSONClick = () => fileInputRef.current.click();
-
-  // Drag and drop states
-  const [draggedItem, setDraggedItem] = useState(null); // { dayIndex, itemIndex }
-  const [dragOverDay, setDragOverDay] = useState(null); // dayIndex
-  const [dragOverItem, setDragOverItem] = useState(null); // { dayIndex, itemIndex }
-  
-  const [resizingItem, setResizingItem] = useState(null); // { dayIndex, itemIndex, startY, startDuration }
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -377,7 +319,6 @@ export default function App() {
         const loadedSchedule = JSON.parse(e.target.result);
         if (Array.isArray(loadedSchedule)) {
           setSchedule(loadedSchedule);
-          alert("読み込み完了");
         }
       } catch (error) {
         alert("読み込み失敗");
@@ -387,7 +328,9 @@ export default function App() {
     event.target.value = '';
   };
 
-  // --- プレビュー/共有ビュー ---
+  const handleLoadJSONClick = () => fileInputRef.current.click();
+
+  // --- 4. 条件付きレンダリング (Early Return) ---
   if (isPreviewMode) {
     return (
       <div className="bg-white min-h-screen text-black font-sans">
