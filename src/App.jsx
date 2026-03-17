@@ -137,8 +137,8 @@ export default function App() {
       if (loadedData && Array.isArray(loadedData)) {
         setSchedule(loadedData);
         setIsPreviewMode(true);
-        // 読み込み後はURLを綺麗にする（任意。再リロードでの事故防止）
-        // window.history.replaceState({}, document.title, window.location.pathname);
+        // 読み込み後はURLを綺麗にする（リロード時に古いデータで上書きされるのを防ぐ）
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
   }, []);
