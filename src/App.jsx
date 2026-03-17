@@ -467,6 +467,19 @@ export default function App() {
                             </div>
                             )}
 
+                            {item.type === 'custom' && (
+                            <div className="overflow-hidden flex flex-col justify-center h-full">
+                                <div className="font-bold text-xs leading-tight line-clamp-2">
+                                  {item.title || '（内容未入力）'}
+                                </div>
+                                {item.duration >= 30 && (
+                                  <div className="text-[9px] text-gray-400 flex items-center gap-1 mt-0.5 leading-none">
+                                    <MapPin size={8} /> {item.location}
+                                  </div>
+                                )}
+                            </div>
+                            )}
+
                             {item.type === 'tour' && (
                             <div className="font-bold text-green-900 text-xs leading-tight">
                                 グループ見学
@@ -667,26 +680,40 @@ export default function App() {
                                             </>
                                         )}
                                         {item.type === 'custom' && (
-                                            <div className="flex flex-col gap-1">
-                                              <div className="flex items-center gap-1.5">
+                                            <div className="flex flex-col gap-1.5">
+                                              <div className="flex items-center gap-1.5 min-w-0">
                                                 <Plus size={14} className="text-indigo-600 shrink-0" />
                                                 <input 
-                                                  className="w-full text-xs font-bold bg-transparent border-b border-dashed border-indigo-200 focus:border-indigo-500 outline-none p-0"
+                                                  className="w-full text-xs font-bold bg-transparent border-b border-dashed border-indigo-200 focus:border-indigo-500 outline-none p-0 truncate"
                                                   value={item.title}
                                                   placeholder="内容を入力..."
                                                   onChange={(e) => updateItem(index, itemIndex, 'title', e.target.value)}
                                                 />
                                               </div>
+                                              
                                               {!isCompact && (
-                                                <div className="flex items-center gap-2 mt-1">
-                                                  <label className="text-[10px] text-slate-400 whitespace-nowrap">時間:</label>
-                                                  <input 
-                                                    type="number" 
-                                                    className="w-12 text-[10px] bg-white border border-slate-200 rounded px-1 outline-none focus:ring-1 focus:ring-indigo-300"
-                                                    value={item.duration}
-                                                    onChange={(e) => updateItem(index, itemIndex, 'duration', e.target.value)}
-                                                  />
-                                                  <span className="text-[10px] text-slate-400">分</span>
+                                                <div className="space-y-1.5">
+                                                  <div className="flex items-center gap-1.5 min-w-0 ml-0.5">
+                                                    <MapPin size={12} className="text-slate-400 shrink-0" />
+                                                    <select 
+                                                      className="w-full text-[10px] text-slate-600 bg-transparent border-none focus:ring-0 truncate p-0 cursor-pointer" 
+                                                      value={item.location} 
+                                                      onChange={(e) => updateItem(index, itemIndex, 'location', e.target.value)}
+                                                    >
+                                                        {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                                                    </select>
+                                                  </div>
+                                                  
+                                                  <div className="flex items-center gap-2 ml-1">
+                                                    <label className="text-[10px] text-slate-400 whitespace-nowrap">時間:</label>
+                                                    <input 
+                                                      type="number" 
+                                                      className="w-12 text-[10px] bg-white border border-slate-200 rounded px-1 outline-none focus:ring-1 focus:ring-indigo-300"
+                                                      value={item.duration}
+                                                      onChange={(e) => updateItem(index, itemIndex, 'duration', e.target.value)}
+                                                    />
+                                                    <span className="text-[10px] text-slate-400">分</span>
+                                                  </div>
                                                 </div>
                                               )}
                                             </div>

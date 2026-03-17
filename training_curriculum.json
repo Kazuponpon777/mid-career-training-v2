@@ -1,0 +1,176 @@
+[
+  {
+    "day": 1,
+    "date": "2026-04-01",
+    "startTime": "10:00",
+    "items": [
+      {
+        "id": "17737033297770.017173369020664575",
+        "type": "custom",
+        "title": "辞令交付",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 30,
+        "tourId": ""
+      },
+      {
+        "id": "17737033509230.7666677421914503",
+        "type": "lecture",
+        "title": "",
+        "lecturerId": "pres",
+        "location": "役員会議室",
+        "duration": 90,
+        "tourId": ""
+      },
+      {
+        "id": "17737033612230.727623346540844",
+        "type": "lunch",
+        "title": "",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 60,
+        "tourId": ""
+      },
+      {
+        "id": "17737033696590.7798096880436223",
+        "type": "lecture",
+        "title": "",
+        "lecturerId": "ichiyama",
+        "location": "役員会議室",
+        "duration": 90,
+        "tourId": ""
+      },
+      {
+        "id": "17737033744780.05251145355082687",
+        "type": "break",
+        "title": "",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 10,
+        "tourId": ""
+      },
+      {
+        "id": "17737128266070.08521162454264164",
+        "type": "custom",
+        "title": "各種システム設定説明（勤怠・給与・elgana）",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 110,
+        "tourId": ""
+      }
+    ]
+  },
+  {
+    "day": 2,
+    "date": "2026-04-02",
+    "startTime": "08:00",
+    "items": [
+      {
+        "id": "17737129000180.009576192328097477",
+        "type": "custom",
+        "title": "レポート作成",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 30,
+        "tourId": ""
+      },
+      {
+        "id": "17737129242230.4187262638269623",
+        "type": "lecture",
+        "title": "",
+        "lecturerId": "inaka",
+        "location": "役員会議室",
+        "duration": 120,
+        "tourId": ""
+      },
+      {
+        "id": "17737129331380.8841934765881505",
+        "type": "break",
+        "title": "",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 10,
+        "tourId": ""
+      },
+      {
+        "id": "17737129341700.4043619555471001",
+        "type": "lecture",
+        "title": "",
+        "lecturerId": "nishioka",
+        "location": "役員会議室",
+        "duration": 80,
+        "tourId": ""
+      },
+      {
+        "id": "17737129766200.2111816631686515",
+        "type": "lunch",
+        "title": "",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 60,
+        "tourId": ""
+      },
+      {
+        "id": "17737129837610.8077151774292719",
+        "type": "tour",
+        "title": "",
+        "lecturerId": "",
+        "location": "外部（見学）",
+        "duration": 100,
+        "tourId": "group_tour"
+      },
+      {
+        "id": "17737130481340.1703745390874558",
+        "type": "custom",
+        "title": "SCM部の仕事",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 50,
+        "tourId": ""
+      },
+      {
+        "id": "17737130717030.9293351591830054",
+        "type": "break",
+        "title": "",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 10,
+        "tourId": ""
+      },
+      {
+        "id": "17737130731860.5864647272227439",
+        "type": "lecture",
+        "title": "",
+        "lecturerId": "miyazawa",
+        "location": "役員会議室",
+        "duration": 50,
+        "tourId": ""
+      }
+    ]
+  },
+  {
+    "day": 3,
+    "date": "2026-03-03",
+    "startTime": "08:00",
+    "items": [
+      {
+        "id": "17737131134230.8464597083080287",
+        "type": "custom",
+        "title": "レポート作成",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 30,
+        "tourId": ""
+      },
+      {
+        "id": "17737131465480.37230952200521594",
+        "type": "custom",
+        "title": "プロダクト事業部　現場見学",
+        "lecturerId": "",
+        "location": "役員会議室",
+        "duration": 450,
+        "tourId": ""
+      }
+    ]
+  }
+]
