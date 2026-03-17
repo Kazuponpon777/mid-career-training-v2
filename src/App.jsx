@@ -332,15 +332,24 @@ export default function App() {
 
   // --- 4. 条件付きレンダリング (Early Return) ---
   if (isPreviewMode) {
+    // 1ページに収めるためのスケーリング計算
+    const maxTotalMinutes = Math.max(...schedule.map(day => 
+      day.items.reduce((sum, item) => sum + item.duration, 0)
+    ), 1); // 0除算防止
+    
+    // A4横の有効な高さ（概算）に基づいた1分あたりのピクセル数
+    // 印刷時のコンテナ高さをある程度固定（例: 650px程度）し、そこに収める
+    const PRINT_AREA_HEIGHT = 600; 
+    const printPixelsPerMinute = Math.min(PIXELS_PER_MINUTE, PRINT_AREA_HEIGHT / maxTotalMinutes);
+
     return (
-      <div className="bg-white min-h-screen text-black font-sans">
+      <div className="bg-white min-h-screen text-black font-sans overflow-x-hidden">
         {/* コントロールバー (修正版: stickyを使用して崩れを防ぐ) */}
         <div className="sticky top-0 left-0 w-full bg-slate-900 text-white p-4 z-50 flex flex-col md:flex-row items-center justify-between shadow-lg no-print gap-4">
           <div className="font-bold text-lg flex items-center gap-2 whitespace-nowrap">
             <Share2 className="text-blue-400" /> 共有モード
           </div>
 
-          {/* 共有リンクエリア: 横幅を制御して崩れを防ぐ */}
           <div className="flex-grow bg-slate-800 rounded-lg p-2 flex items-center gap-2 border border-slate-700 w-full md:mx-4 min-w-0">
             <LinkIcon size={16} className="text-slate-400 ml-2 flex-shrink-0" />
             <input 
@@ -372,91 +381,103 @@ export default function App() {
         {/* 印刷用スタイル定義 */}
         <style>{`
           @media print {
-            @page { size: landscape; margin: 10mm; }
+            @page { size: landscape; margin: 5mm; }
             .no-print { display: none !important; }
             body { background: white !important; -webkit-print-color-adjust: exact; }
+            .print-container { padding: 0 !important; }
           }
         `}</style>
 
-        {/* コンテンツエリア: パディング調整 */}
-        <div className="p-8">
-            <div className="mb-6 text-center border-b-2 border-black pb-2">
-            <h1 className="text-3xl font-bold">中途研修カリキュラム</h1>
-            <p className="mt-1">八洲建設株式会社</p>
+        {/* コンテンツエリア */}
+        <div className="p-4 md:p-8 print-container">
+            <div className="mb-4 text-center border-b-2 border-black pb-2">
+              <h1 className="text-2xl font-bold">中途研修カリキュラム</h1>
+              <p className="text-sm mt-0.5">八洲建設株式会社</p>
             </div>
 
             {/* グリッドレイアウト (3カラム) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full print:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2 w-full">
             {schedule.map((dayData, i) => {
                 let currentMinutes = timeToMinutes(dayData.startTime);
                 return (
-                <div key={dayData.day} className="border border-black rounded p-0 flex flex-col break-inside-avoid">
+                <div key={dayData.day} className="border border-black rounded p-0 flex flex-col h-full bg-slate-50/30">
                     {/* ヘッダー */}
-                    <div className="bg-slate-100 border-b border-black p-3 text-center">
-                    <h2 className="text-xl font-bold">Day {dayData.day}</h2>
-                    <div className="text-sm font-bold mt-1">
-                        {dayData.date ? `${dayData.date.replace(/-/g, '/')} ${getDayOfWeek(dayData.date)}` : '日付未定'}
-                    </div>
-                    <div className="text-sm mt-1">開始: {dayData.startTime}</div>
+                    <div className="bg-slate-100 border-b border-black p-2 text-center">
+                      <h2 className="text-lg font-bold leading-tight">Day {dayData.day}</h2>
+                      <div className="text-[10px] font-bold">
+                          {dayData.date ? `${dayData.date.replace(/-/g, '/')} ${getDayOfWeek(dayData.date)}` : '日付未定'}
+                      </div>
+                      <div className="text-[10px] mt-0.5 opacity-70">開始: {dayData.startTime}</div>
                     </div>
 
-                    {/* リスト本体 */}
-                    <div className="p-2 space-y-2 flex-grow">
-                    {dayData.items.length === 0 && <div className="text-center text-gray-400 py-10">予定なし</div>}
+                    {/* リスト本体 (時間の長さに応じた高さ) */}
+                    <div className="p-1 space-y-0 flex-grow relative">
+                    {dayData.items.length === 0 && <div className="text-center text-gray-400 py-20 text-xs">予定なし</div>}
                     
                     {dayData.items.map((item) => {
                         const startStr = minutesToTime(currentMinutes);
                         const endMinutes = currentMinutes + item.duration;
                         const endStr = minutesToTime(endMinutes);
                         const isOverTime = endMinutes > END_LIMIT;
+                        
+                        // 高さ計算
+                        const itemHeight = item.duration * printPixelsPerMinute;
                         currentMinutes = endMinutes;
 
-                        // 閲覧用デザイン
                         let bgColor = 'bg-white';
                         let borderColor = 'border-l-4 border-l-black';
+                        let textColor = 'text-slate-800';
                         
                         if (isOverTime) borderColor = 'border-l-4 border-l-red-600';
-                        else if (item.type === 'lunch') { bgColor = 'bg-yellow-50'; borderColor = 'border-l-4 border-l-yellow-500'; }
-                        else if (item.type === 'tour') { bgColor = 'bg-green-50'; borderColor = 'border-l-4 border-l-green-600'; }
-                        else if (item.type === 'break') { bgColor = 'bg-gray-100'; borderColor = 'border-l-4 border-l-gray-400'; }
+                        else if (item.type === 'lunch') { bgColor = 'bg-yellow-50/80'; borderColor = 'border-l-4 border-l-yellow-500'; }
+                        else if (item.type === 'tour') { bgColor = 'bg-green-50/80'; borderColor = 'border-l-4 border-l-green-600'; }
+                        else if (item.type === 'break') { bgColor = 'bg-gray-100/80'; borderColor = 'border-l-4 border-l-gray-400'; }
                         else { borderColor = 'border-l-4 border-l-blue-600'; }
 
                         return (
-                        <div key={item.id} className={`p-2 border border-gray-300 rounded text-sm ${bgColor} ${borderColor} break-inside-avoid shadow-none`}>
-                            <div className="flex justify-between font-bold text-gray-700 text-xs mb-1">
-                            <span>{startStr} - {endStr}</span>
-                            <span>{item.duration}分</span>
+                        <div 
+                          key={item.id} 
+                          className={`p-1.5 border border-gray-200 mb-0.5 rounded-sm overflow-hidden ${bgColor} ${borderColor} shadow-none flex flex-col justify-center`}
+                          style={{ height: `${itemHeight}px`, minHeight: '24px' }}
+                        >
+                            <div className="flex justify-between items-center font-bold text-gray-500 text-[9px] mb-0.5 leading-none">
+                              <span>{startStr}-{endStr}</span>
+                              <span>{item.duration}分</span>
                             </div>
                             
                             {item.type === 'lecture' && (
-                            <div>
-                                <div className="font-bold text-base">
+                            <div className="overflow-hidden">
+                                <div className="font-bold text-xs truncate leading-tight">
                                 {(() => {
                                     const l = LECTURERS.find(x => x.id === item.lecturerId);
                                     return l ? `${l.name}` : '講師未選択';
                                 })()}
                                 </div>
-                                {(() => {
-                                    const l = LECTURERS.find(x => x.id === item.lecturerId);
-                                    return l && l.department ? <div className="text-xs">{l.department}</div> : null;
-                                })()}
-                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                <MapPin size={10} /> {item.location}
-                                </div>
+                                {item.duration >= 30 && (
+                                  <>
+                                    {(() => {
+                                        const l = LECTURERS.find(x => x.id === item.lecturerId);
+                                        return l && l.department ? <div className="text-[9px] opacity-70 truncate leading-tight">{l.department}</div> : null;
+                                    })()}
+                                    <div className="text-[9px] text-gray-400 flex items-center gap-1 mt-0.5 leading-none">
+                                      <MapPin size={8} /> {item.location}
+                                    </div>
+                                  </>
+                                )}
                             </div>
                             )}
 
                             {item.type === 'tour' && (
-                            <div className="font-bold text-green-900">
+                            <div className="font-bold text-green-900 text-xs leading-tight">
                                 グループ見学
-                                <div className="text-xs font-normal text-green-700">にじまち常滑・半田他</div>
+                                {item.duration >= 30 && <div className="text-[9px] font-normal text-green-700 truncate">にじまち常滑・半田他</div>}
                             </div>
                             )}
                             
-                            {item.type === 'lunch' && <div className="font-bold text-center text-yellow-800">昼休憩</div>}
-                            {item.type === 'break' && <div className="text-center text-gray-600">休憩</div>}
+                            {item.type === 'lunch' && <div className="font-bold text-center text-yellow-800 text-xs">昼休憩</div>}
+                            {item.type === 'break' && <div className="text-center text-gray-600 text-xs">休憩</div>}
                             
-                            {isOverTime && <div className="text-red-600 font-bold text-xs mt-1">※時間超過</div>}
+                            {isOverTime && item.duration >= 15 && <div className="text-red-600 font-bold text-[8px] mt-0.5 italic">※時間超過</div>}
                         </div>
                         );
                     })}
