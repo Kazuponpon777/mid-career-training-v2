@@ -228,6 +228,48 @@ export default function App() {
     setDragOverItem(null);
   };
 
+  // --- リサイズ関連のハンドラ ---
+  const handleResizeStart = (e, dayIndex, itemIndex, currentDuration) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingItem({
+      dayIndex,
+      itemIndex,
+      startY: e.clientY,
+      startDuration: currentDuration
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!resizingItem) return;
+
+      const deltaY = e.clientY - resizingItem.startY;
+      const deltaMins = Math.round(deltaY / PIXELS_PER_MINUTE / 5) * 5; // 5分単位でスナップ
+      const newDuration = Math.max(5, resizingItem.startDuration + deltaMins);
+
+      const newSchedule = [...schedule];
+      if (newSchedule[resizingItem.dayIndex].items[resizingItem.itemIndex].duration !== newDuration) {
+        newSchedule[resizingItem.dayIndex].items[resizingItem.itemIndex].duration = newDuration;
+        setSchedule(newSchedule);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setResizingItem(null);
+    };
+
+    if (resizingItem) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingItem, schedule]);
+
   const moveItem = (dayIndex, itemIndex, direction) => {
     const newSchedule = [...schedule];
     const items = newSchedule[dayIndex].items;
@@ -323,6 +365,8 @@ export default function App() {
   const [draggedItem, setDraggedItem] = useState(null); // { dayIndex, itemIndex }
   const [dragOverDay, setDragOverDay] = useState(null); // dayIndex
   const [dragOverItem, setDragOverItem] = useState(null); // { dayIndex, itemIndex }
+  
+  const [resizingItem, setResizingItem] = useState(null); // { dayIndex, itemIndex, startY, startDuration }
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -599,8 +643,9 @@ export default function App() {
                             const isCompact = heightPx < 45;
                             const isDragging = draggedItem?.dayIndex === index && draggedItem?.itemIndex === itemIndex;
                             const isOver = dragOverItem?.dayIndex === index && dragOverItem?.itemIndex === itemIndex;
+                            const isResizing = resizingItem?.dayIndex === index && resizingItem?.itemIndex === itemIndex;
 
-                            let baseClass = "absolute left-1 right-1 rounded-lg border-l-4 shadow-sm group transition-all overflow-hidden flex flex-col cursor-grab active:cursor-grabbing ";
+                            let baseClass = "absolute left-1 right-1 rounded-lg border-l-4 shadow-sm group transition-all flex flex-col cursor-grab active:cursor-grabbing ";
                             if (isDragging) baseClass += 'opacity-40 scale-95 ';
                             if (isOver) baseClass += 'ring-2 ring-blue-400 ring-offset-1 z-20 ';
                             
@@ -616,7 +661,7 @@ export default function App() {
                                   key={item.id} 
                                   className={baseClass} 
                                   style={{ top: `${topPx}px`, height: `${heightPx}px`, zIndex: isOver ? 30 : 10 }}
-                                  draggable
+                                  draggable={!isResizing} // Disable drag when resizing
                                   onDragStart={(e) => handleDragStart(e, index, itemIndex)}
                                   onDragOver={(e) => handleDragOver(e, index, itemIndex)}
                                   onDrop={(e) => handleDrop(e, index, itemIndex)}
@@ -702,6 +747,15 @@ export default function App() {
                                             {item.type === 'lecture' ? LECTURERS.find(l => l.id === item.lecturerId)?.name : '見学'}
                                           </div>
                                         )}
+                                    </div>
+
+                                    {/* リサイズハンドル (末尾に明示的に配置) */}
+                                    <div 
+                                      className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize z-50 flex items-end justify-center group/handle pb-1"
+                                      onMouseDown={(e) => handleResizeStart(e, index, itemIndex, item.duration)}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <div className="w-12 h-1 bg-slate-400/30 rounded-full group-hover/handle:bg-blue-500/60 transition-colors"></div>
                                     </div>
                                 </div>
                             );
